@@ -9,7 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from shapely.geometry import Polygon, box
+from shapely.geometry import Point, Polygon, box, shape
+from shapely.prepared import prep
 from shapely.validation import make_valid
 
 
@@ -135,41 +136,94 @@ def apply_padding(
     ]
 
 
-def get_country_code(lat: float, lon: float, country_index: dict | None) -> str | None:
-    """Get ISO country code from coordinates."""
-    return get_country_from_coords(lat, lon)
+def get_country_code(
+    lat: float, lon: float, country_index: list[dict[str, Any]] | None
+) -> str | None:
+    """Get ISO country code from coordinates using polygon containment."""
+    if not country_index:
+        return None
 
+    point = Point(lon, lat)
 
-def get_country_from_coords(lat: float, lon: float) -> str | None:
-    """Simple coordinate-based country detection for Alps region."""
-    if lon < 5.5:
-        return "FR"
-    if lon < 7.5 and lat < 46.3:
-        return "FR"
-    if lon < 6.8 and lat > 45.5 and lat < 46.5:
-        return "FR"
-    if lat > 47.5 and lon > 7.5 and lon < 13:
-        return "DE"
-    if lon > 14.5:
-        return "SI" if lat < 46.8 else "AT"
-    if lon > 9.5 and lon < 13 and lat > 46.5 and lat < 47.8:
-        return "AT"
-    if lon > 12 and lat < 47 and lat > 44:
-        return "IT"
-    if lon > 6.8 and lon < 10.5 and lat > 45.8 and lat < 47.5:
-        return "CH"
-    if lon > 10 and lon < 12.5 and lat > 46.5 and lat < 47.8:
-        return "AT"
-    if lat < 46.8 and lon > 6.6 and lon < 13 and lat > 44:
-        return "IT"
-    if lon > 7 and lon < 8 and lat > 47.5:
-        return "DE"
+    for entry in country_index:
+        if entry["prepared"].contains(point) or entry["prepared"].covers(point):
+            return entry["iso_a2"]
+
+    nearest_code = None
+    nearest_distance = float("inf")
+    for entry in country_index:
+        distance = entry["geometry"].distance(point)
+        if distance < nearest_distance:
+            nearest_distance = distance
+            nearest_code = entry["iso_a2"]
+
+    if nearest_distance <= 0.02:
+        return nearest_code
+
     return None
 
 
-def build_country_index() -> dict | None:
-    """Build country polygon index - returns None, uses coordinate lookup instead."""
-    return None
+def build_country_index() -> list[dict[str, Any]] | None:
+    """Build country polygon index from bundled Natural Earth boundaries."""
+    data_path = Path(__file__).parent.parent / "data" / "alps_countries.geojson"
+    if not data_path.exists():
+        print(f"Warning: Country boundary file not found: {data_path}", file=sys.stderr)
+        return None
+
+    try:
+        with open(data_path) as f:
+            geojson = json.load(f)
+
+        index = []
+        iso_a3_to_a2 = {
+            "FRA": "FR",
+            "DEU": "DE",
+            "AUT": "AT",
+            "ITA": "IT",
+            "CHE": "CH",
+            "SVN": "SI",
+            "LIE": "LI",
+            "HRV": "HR",
+            "DE": "DE",
+            "AT": "AT",
+            "IT": "IT",
+            "CH": "CH",
+            "SI": "SI",
+            "LI": "LI",
+            "HR": "HR",
+        }
+
+        for feature in geojson.get("features", []):
+            props = feature.get("properties", {})
+            iso_a2 = props.get("ISO_A2")
+            if not iso_a2 or iso_a2 == "-99":
+                iso_a2 = iso_a3_to_a2.get(props.get("ADM0_A3"), None)
+            geometry_data = feature.get("geometry")
+            if not iso_a2 or not geometry_data:
+                continue
+
+            geometry = shape(geometry_data)
+            if not geometry.is_valid:
+                geometry = make_valid(geometry)
+            if geometry.is_empty:
+                continue
+
+            index.append(
+                {
+                    "iso_a2": iso_a2,
+                    "geometry": geometry,
+                    "prepared": prep(geometry),
+                }
+            )
+
+        if not index:
+            print("Warning: No country polygons loaded", file=sys.stderr)
+            return None
+
+        return index
+    except Exception as exc:
+        print(f"Warning: Could not build country index: {exc}", file=sys.stderr)
+        return None
 
 
 def compute_hierarchy(resorts: list[dict]) -> list[dict]:
@@ -203,7 +257,9 @@ def compute_hierarchy(resorts: list[dict]) -> list[dict]:
     return resorts
 
 
-def parse_overpass_output(data: dict, country_index: dict | None) -> list[dict]:
+def parse_overpass_output(
+    data: dict, country_index: list[dict[str, Any]] | None
+) -> list[dict]:
     """Parse Overpass JSON into resort objects."""
     resorts = []
 
@@ -225,11 +281,12 @@ def parse_overpass_output(data: dict, country_index: dict | None) -> list[dict]:
 
         area_km2 = calculate_area_km2(polygon)
         bounds = polygon.bounds
-        center_lat = (bounds[1] + bounds[3]) / 2
-        center_lon = (bounds[0] + bounds[2]) / 2
+        center_lat = polygon.centroid.y
+        center_lon = polygon.centroid.x
 
         padding = get_padding_meters(area_km2)
-        bbox = apply_padding(bounds, padding, center_lat)
+        bbox_center_lat = (bounds[1] + bounds[3]) / 2
+        bbox = apply_padding(bounds, padding, bbox_center_lat)
 
         names = collect_name_variants(tags)
         country = get_country_code(center_lat, center_lon, country_index)

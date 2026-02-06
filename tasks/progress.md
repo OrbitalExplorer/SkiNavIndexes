@@ -9,22 +9,24 @@
 - [x] Phase 4: JSON Schema - draft-07 compliant
 - [x] Phase 5: GitHub Actions - monthly cron workflow
 - [x] Phase 6: Documentation - README, requirements.txt, latest.json
+- [x] Phase 7: Data quality improvements - polygon country detection + skiable-area feasibility
 
 ### Statistics
 - Total resorts: 952
 - Domains (parents): 27
 - Child resorts: 140
-- With country codes: 872 (92%)
+- With country codes: 952 (100%)
 - With multiple names: 72
 
 ### Country Distribution
-- CH: 249
-- AT: 247
-- FR: 205
-- IT: 113
+- CH: 279
+- AT: 239
+- FR: 187
+- IT: 180
 - DE: 46
-- SI: 12
-- Unknown: 80
+- SI: 18
+- LI: 1
+- HR: 2
 
 ---
 

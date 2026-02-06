@@ -42,6 +42,18 @@ Collect from OSM tags:
 - For hierarchy detection: bounds are sufficient for 95% containment
 - Normalize script should handle both cases
 
+### Country Detection
+- Replaced heuristic lat/lon rules with point-in-polygon lookup using bundled Natural Earth boundaries in `data/alps_countries.geojson`
+- This avoids external API rate limits and gives deterministic CI behavior
+- Coverage is now 952/952 resorts with country codes
+- Countries currently covered in bbox: AT, CH, IT, FR, DE, SI, LI, HR
+
+### Skiable Area Metric
+- OSM has no single canonical "skiable area" field
+- `landuse=winter_sports` represents resort footprint, not piste surface area
+- Best future approach: add a second query for `piste:type=downhill` and compute optional `skiable_area_km2`
+- Keep current `area_km2` field for stable compatibility and predictable semantics
+
 ### Dependencies
 - shapely (polygon operations)
 - geojson (geometry handling)
@@ -60,3 +72,4 @@ Collect from OSM tags:
 - Overpass API: https://overpass-api.de/
 - OSM Landuse: https://wiki.openstreetmap.org/wiki/Key:landuse
 - Shapely: https://shapely.readthedocs.io/
+- Natural Earth countries: https://www.naturalearthdata.com/

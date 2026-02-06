@@ -116,6 +116,7 @@ Implement an automated pipeline that extracts ski resort data from OpenStreetMap
 |------|--------|-------|
 | queries/winter_sports.overpassql | complete | 952 elements returned |
 | scripts/normalize.py | complete | Handles geometry, hierarchy, names |
+| data/alps_countries.geojson | complete | Natural Earth country polygons for offline country codes |
 | scripts/validate.py | complete | Schema + semantic validation |
 | schemas/resort.json | complete | JSON Schema draft-07 |
 | .github/workflows/update-resorts.yml | complete | Monthly cron + manual trigger |
@@ -123,3 +124,20 @@ Implement an automated pipeline that extracts ski resort data from OpenStreetMap
 | output/resorts.json | complete | Sample output generated |
 | latest.json | complete | Version pointer |
 | README.md | complete | Usage documentation |
+
+---
+
+## Phase 7: Data Quality Improvements
+**Status:** `complete`
+
+**Tasks:**
+- [x] Replace heuristic country detection with polygon-based country boundaries
+- [x] Verify country assignment accuracy on current Alps dataset
+- [x] Evaluate feasibility of skiable-area metric from OSM data
+- [x] Decide schema approach for skiable area (`area_km2` replacement vs optional field)
+
+**Results:**
+- Country detection now uses polygon containment from bundled Natural Earth boundaries (`data/alps_countries.geojson`)
+- Country coverage improved from 872/952 to 952/952 assigned
+- Added support for countries present in the Alps bounding box: AT, CH, IT, FR, DE, SI, LI, HR
+- Decision: keep `area_km2` as resort footprint and add `skiable_area_km2` only when we introduce a second downhill-piste query; replacing `area_km2` now would reduce metric reliability

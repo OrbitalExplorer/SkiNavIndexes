@@ -92,7 +92,9 @@ SkiNavIndexes/
 
 Uses OpenStreetMap `landuse=winter_sports` features with a `name` tag.
 
-**Current coverage:** Alps region (Austria, Switzerland, Italy, France, Germany, Slovenia)
+**Current coverage:** Alps region (Austria, Switzerland, Italy, France, Germany, Slovenia, Liechtenstein, Croatia edge)
+
+Country codes are assigned via offline point-in-polygon lookup using bundled Natural Earth boundaries in `data/alps_countries.geojson`.
 
 ## Automation
 
@@ -107,3 +109,4 @@ Trigger manually via `workflow_dispatch`.
 ## License
 
 Data sourced from OpenStreetMap, licensed under ODbL.
+Country boundary reference data is derived from Natural Earth.
