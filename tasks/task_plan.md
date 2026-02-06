@@ -1,0 +1,125 @@
+# Task Plan: Ski Resort Index Pipeline
+
+## Goal
+Implement an automated pipeline that extracts ski resort data from OpenStreetMap, normalizes it into a compact JSON format, and publishes it via GitHub Releases with monthly updates.
+
+## Success Criteria
+- [x] Overpass query returns valid JSON with geometry for Alps region
+- [x] Normalization script handles all edge cases (hierarchy, bbox padding, names)
+- [x] Validation script catches schema violations
+- [x] GitHub Actions workflow created
+- [x] JSON schema defined
+- [x] README and requirements.txt updated
+
+---
+
+## Phases
+
+### Phase 1: Overpass Query
+**Status:** `complete`  
+**File:** `queries/winter_sports.overpassql`
+
+**Tasks:**
+- [x] Write Overpass QL query for Alps bounding box
+- [x] Query `landuse=winter_sports` with `name` tag
+- [x] Return geometry with `out tags geom`
+- [x] Test query against Overpass API
+
+**Results:**
+- 952 elements (896 ways, 56 relations)
+- Ways: full geometry available
+- Relations: bounds only (full geom times out)
+- File size: ~1.5MB
+
+---
+
+### Phase 2: Normalization Script
+**Status:** `complete`  
+**File:** `scripts/normalize.py`
+
+**Tasks:**
+- [x] Parse Overpass JSON output
+- [x] Convert ways/relations to Shapely polygons
+- [x] Calculate area for each polygon
+- [x] Detect parent/child relationships (95% containment)
+- [x] Compute padded bounding boxes by size category
+- [x] Collect all name variants (name, alt_name, name:*, loc_name, short_name)
+- [x] Determine country codes from centroid
+- [x] Generate resorts.json output
+- [x] Handle edge cases (multi-polygon, invalid geometry, etc.)
+
+**Results:**
+- 952 resorts parsed
+- 27 domains, 140 child resorts detected
+- 872/952 have country codes
+- 72 resorts have multiple name variants
+
+---
+
+### Phase 3: Validation Script
+**Status:** `complete`  
+**File:** `scripts/validate.py`
+
+**Tasks:**
+- [x] Validate JSON against schema
+- [x] Ensure parent/child relationships are consistent
+- [x] Validate bboxes (west < east, south < north)
+
+---
+
+### Phase 4: JSON Schema
+**Status:** `complete`  
+**File:** `schemas/resort.json`
+
+**Tasks:**
+- [x] Create JSON Schema for resorts.json format
+- [x] Define resort object schema with all required fields
+
+---
+
+### Phase 5: GitHub Actions Workflow
+**Status:** `complete`  
+**File:** `.github/workflows/update-resorts.yml`
+
+**Tasks:**
+- [x] Monthly cron schedule (1st of month)
+- [x] Manual workflow_dispatch trigger
+- [x] Run Overpass query
+- [x] Run normalize script
+- [x] Run validate script
+- [x] Check for changes vs previous release
+- [x] Generate latest.json
+- [x] Create GitHub Release
+- [x] Commit latest.json to repo
+
+---
+
+### Phase 6: Documentation & Polish
+**Status:** `complete`
+
+**Tasks:**
+- [x] Update README.md with usage instructions
+- [x] Create requirements.txt
+- [x] Add sample output for reference
+- [x] Generate latest.json
+
+---
+
+## Errors Encountered
+| Error | Attempt | Resolution |
+|-------|---------|------------|
+
+---
+
+## Files Created/Modified
+| File | Status | Notes |
+|------|--------|-------|
+| queries/winter_sports.overpassql | complete | 952 elements returned |
+| scripts/normalize.py | complete | Handles geometry, hierarchy, names |
+| scripts/validate.py | complete | Schema + semantic validation |
+| schemas/resort.json | complete | JSON Schema draft-07 |
+| .github/workflows/update-resorts.yml | complete | Monthly cron + manual trigger |
+| requirements.txt | complete | shapely, jsonschema, pyyaml |
+| output/resorts.json | complete | Sample output generated |
+| latest.json | complete | Version pointer |
+| README.md | complete | Usage documentation |
