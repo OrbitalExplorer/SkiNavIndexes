@@ -368,9 +368,14 @@ def parse_overpass_output(
         })
     
     # Also process landuse=winter_sports relations (existing behavior)
+    # But skip if already processed as site=piste (some relations have both tags)
     for rel_id, relation in relations_by_id.items():
         tags = relation.get("tags", {})
         if tags.get("landuse") != "winter_sports":
+            continue
+        
+        # Skip if already processed as site=piste
+        if tags.get("site") == "piste":
             continue
             
         name = tags.get("name")
